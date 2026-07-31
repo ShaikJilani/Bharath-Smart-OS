@@ -790,18 +790,6 @@ export default function App() {
           </div>
 
           <div className="space-y-4 max-w-md mx-auto">
-            <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-left font-mono text-[11px] text-slate-400 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">System Handshake Logs</span>
-                <span className="text-emerald-500 font-bold animate-pulse">● ONLINE</span>
-              </div>
-              <div className="pt-2 border-t border-slate-800/50 text-slate-300 leading-relaxed space-y-0.5">
-                <p># connect -grid indore_active_node_3000</p>
-                <p className="text-slate-500">Connecting to National Informatics Centre Backbone...</p>
-                <p className="text-slate-400 font-semibold">{splashStatus}</p>
-              </div>
-            </div>
-
             <div className="space-y-1.5">
               <div className="flex justify-between text-[11px] font-bold text-slate-400">
                 <span>SYSTEM BOOT UP</span>
@@ -815,14 +803,6 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          <button
-            onClick={() => setShowSplash(false)}
-            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 hover:border-white/20 text-xs font-bold rounded-2xl tracking-wider uppercase transition-all inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>Enter Command Center</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
       </div>
     );

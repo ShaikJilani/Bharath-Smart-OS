@@ -1,0 +1,6 @@
+{
+  "name": "Bharat Smart OS",
+  "description": "An AI-Powered Urban and Rural Intelligence Platform for Viksit Bharat 2047 enabling citizens to report issues with AI classification, and officers to manage them with real-time analytics.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -16,6 +16,7 @@ import ViksitBharatDashboard from "./components/ViksitBharatDashboard";
 import LanguageSelector from "./components/LanguageSelector";
 import { supabase } from "./lib/supabase";
 import CitizenSupabaseAuth from "./components/CitizenSupabaseAuth";
+import SwitchRoleModal from "./components/SwitchRoleModal";
 
 const APP_LOCAL_TRANSLATIONS: Record<string, Record<string, string>> = {
   English: {
@@ -576,6 +577,7 @@ export default function App() {
   }, []);
 
   // SLA Administration States
+  const [switchRoleTarget, setSwitchRoleTarget] = useState<Role | null>(null);
   const [slaPotholes, setSlaPotholes] = useState<number>(48);
   const [slaStreetlights, setSlaStreetlights] = useState<number>(24);
   const [slaWaterSupply, setSlaWaterSupply] = useState<number>(36);
@@ -645,14 +647,10 @@ export default function App() {
 
   const handleRoleSwitch = (newRole: Role) => {
     if (!currentUser) return;
-    const updatedUser = { ...currentUser, role: newRole };
-    setCurrentUser(updatedUser);
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-    
-    // Switch to appropriate active tab
-    if (newRole === "citizen") setActiveTab("dashboard");
-    else if (newRole === "officer") setActiveTab("officer-dash");
-    
+    if (currentUser.role === newRole) return;
+
+    // Prompt authentication modal asking for email and password
+    setSwitchRoleTarget(newRole);
   };
 
   const handleShortcutLogin = (loginRole: Role) => {
@@ -1385,6 +1383,29 @@ export default function App() {
           </div>
         </footer>
       </div>
+
+      {/* Switch Role Modal */}
+      {switchRoleTarget && currentUser && (
+        <SwitchRoleModal
+          targetRole={switchRoleTarget}
+          currentRole={currentUser.role}
+          selectedLanguage={selectedLanguage}
+          onClose={() => setSwitchRoleTarget(null)}
+          onSuccess={(authenticatedUser, newTok) => {
+            setCurrentUser(authenticatedUser);
+            setToken(newTok);
+            setRole(authenticatedUser.role);
+            localStorage.setItem("currentUser", JSON.stringify(authenticatedUser));
+            localStorage.setItem("token", newTok);
+            setSwitchRoleTarget(null);
+            if (authenticatedUser.role === "officer") {
+              setActiveTab("officer-dash");
+            } else {
+              setActiveTab("dashboard");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

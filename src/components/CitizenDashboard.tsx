@@ -421,33 +421,9 @@ export default function CitizenDashboard({
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        setLatitude(parseFloat(lat.toFixed(6)));
-        setLongitude(parseFloat(lng.toFixed(6)));
-
-        try {
-          const res = await fetch("/api/geocode", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ latitude: lat, longitude: lng, areaType }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.address) {
-              setAddress(data.address);
-              setWardOrVillage(data.wardOrVillage || data.village || (areaType === "rural" ? "Village Panchayat" : "Ward 45"));
-              setDistrict(data.district || "Indore");
-              setStateName(data.state || "Madhya Pradesh");
-              setPincode(data.pincode || (areaType === "urban" ? "452010" : "453331"));
-              if (data.detectedAreaType) {
-                setGpsAreaType(data.detectedAreaType);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Geocoding failed:", err);
-        } finally {
-          setFetchingGps(false);
-        }
+        
+        await handlePositionUpdate(lat, lng);
+        setFetchingGps(false);
       },
       (error) => {
         console.error("GPS retrieval error:", error);
@@ -487,6 +463,31 @@ export default function CitizenDashboard({
 
     setSearchingLocation(true);
     setSearchError(null);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + " Indore Madhya Pradesh")}&limit=1&addressdetails=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      if (response.ok) {
+        const dataArray = await response.json();
+        if (dataArray && dataArray.length > 0) {
+          const data = dataArray[0];
+          const lat = parseFloat(data.lat);
+          const lon = parseFloat(data.lon);
+          
+          setLatitude(lat);
+          setLongitude(lon);
+          
+          // Re-use handlePositionUpdate to get rich data for this lat/lon
+          handlePositionUpdate(lat, lon);
+          setSearchingLocation(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Client Nominatim Search API failed:", err);
+    }
 
     try {
       const res = await fetch("/api/search-location", {
@@ -530,6 +531,54 @@ export default function CitizenDashboard({
   const handlePositionUpdate = async (lat: number, lng: number) => {
     setLatitude(parseFloat(lat.toFixed(6)));
     setLongitude(parseFloat(lng.toFixed(6)));
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.address) {
+          const fullAddress = data.display_name;
+          const addrObj = data.address;
+          
+          const state = addrObj.state || "Madhya Pradesh";
+          const district = addrObj.city_district || addrObj.county || addrObj.district || addrObj.state_district || "Unknown District";
+          const city = addrObj.city || addrObj.town || addrObj.village || addrObj.municipality || "Unknown City";
+          const pincode = addrObj.postcode || (areaType === "urban" ? "452010" : "453331");
+          
+          let wOrV = "";
+          const isRuralGPS = !!addrObj.village || !!addrObj.hamlet || !!addrObj.isolated_dwellings || !!addrObj.farm || !!addrObj.croft || !!addrObj.allotments || (fullAddress.toLowerCase().includes("panchayat") || fullAddress.toLowerCase().includes("gram"));
+          const isSemiUrbanGPS = !isRuralGPS && (!!addrObj.town || !!addrObj.municipality || !!addrObj.borough);
+          const detectedAreaType = isRuralGPS ? "rural" : isSemiUrbanGPS ? "semi-urban" : "urban";
+          
+          if (isRuralGPS) {
+            const vName = addrObj.village || addrObj.hamlet || addrObj.town || "Village";
+            wOrV = (vName.toLowerCase().includes("panchayat") || vName.toLowerCase().includes("gram"))
+              ? vName
+              : `${vName} Gram Panchayat`;
+          } else {
+            const sub = addrObj.suburb || addrObj.neighbourhood || addrObj.residential || addrObj.city_district || "";
+            const wardSeed = Math.floor((lat + lng) * 1000) % 150 + 1;
+            wOrV = `Ward ${wardSeed}`;
+            if (sub) {
+              wOrV += ` - ${sub}`;
+            }
+          }
+
+          setAddress(fullAddress);
+          setWardOrVillage(wOrV);
+          setDistrict(city !== "Unknown City" ? city : district);
+          setStateName(state);
+          setPincode(pincode);
+          setGpsAreaType(detectedAreaType);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Client Nominatim API failed:", err);
+    }
 
     try {
       const res = await fetch("/api/geocode", {
